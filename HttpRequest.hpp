@@ -1,4 +1,5 @@
 #pragma once
+
 #include <iostream>;
 #include <windows.h>
 #include <winhttp.h>
@@ -13,10 +14,14 @@ class HttpRequest {
 
 private:
 	std::wstring _userAgent;
+	el::Logger* _logger;
 
 public:
 	HttpRequest(const std::wstring&, const std::wstring&, const std::wstring&);
-	bool SendRequest(const std::wstring&, const std::wstring&, void*, DWORD);
+	bool SendRequest(const std::wstring &host, short int port, const std::wstring& path,
+		const std::wstring &method,
+		vector<const wchar_t *> header,
+		void *body, DWORD bodySize);
 
 	std::wstring resHeader;
 	std::vector<BYTE> resBody;
@@ -24,10 +29,13 @@ public:
 
 HttpRequest::HttpRequest(const std::wstring &userAgent, const std::wstring &proxyIp, const std::wstring &proxyPort):
 	_userAgent(userAgent) {
-
+	_logger = el::Loggers::getLogger("metadata");
 }
 
-bool HttpRequest::SendRequest(const std::wstring &url, const std::wstring &method, void *body, DWORD bodySize) {
+bool HttpRequest::SendRequest(const std::wstring &host, short int port, const std::wstring& path, 
+		const std::wstring &method, 
+		vector<const wchar_t *> headers,
+		void *body, DWORD bodySize) {
 
 	DWORD dwSize;
 	DWORD dwDownloaded;
@@ -40,21 +48,31 @@ bool HttpRequest::SendRequest(const std::wstring &url, const std::wstring &metho
 	resHeader.resize(0);
 	resBody.resize(0);
 
-	hSession = WinHttpOpen(_userAgent.c_str(), WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+	hSession = WinHttpOpen(_userAgent.c_str(), WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+		WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
 	if (hSession)
-		hConnect = WinHttpConnect(hSession, url.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0);
+		hConnect = WinHttpConnect(hSession, host.c_str(), port, 0);
 	else
-		printf("session handle failed\n");
+		_logger->fatal("session handle failed %v", GetLastError());
 
 	if (hConnect)
-		hRequest = WinHttpOpenRequest(hConnect, method.c_str(), NULL, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+		hRequest = WinHttpOpenRequest(hConnect, method.c_str(), path.c_str(), NULL,
+			WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, NULL);
 	else
-		printf("connect handle failed\n");
+		_logger->fatal("connect handle failed %v", GetLastError());
+
+	if (hRequest)
+		for (auto header : headers) {
+			WinHttpAddRequestHeaders(hRequest,
+				header,
+				(ULONG)-1L,
+				WINHTTP_ADDREQ_FLAG_ADD);
+		}
 
 	if (hRequest)
 		bResults = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, body, bodySize, 0, 0);
 	else
-		printf("request handle failed\n");
+		_logger->fatal("request handle failed %v", GetLastError());
 
 	if (bResults)
 		bResults = WinHttpReceiveResponse(hRequest, NULL);
@@ -85,7 +103,7 @@ bool HttpRequest::SendRequest(const std::wstring &url, const std::wstring &metho
 			bResults = WinHttpQueryDataAvailable(hRequest, &dwSize);
 			if (!bResults)
 			{
-				printf("Error %u in WinHttpQueryDataAvailable.\n", GetLastError());
+				_logger->fatal("Error %v in WinHttpQueryDataAvailable", GetLastError());
 				break;
 			}
 
@@ -102,7 +120,7 @@ bool HttpRequest::SendRequest(const std::wstring &url, const std::wstring &metho
 				bResults = WinHttpReadData(hRequest, &resBody[dwOffset], dwSize, &dwDownloaded);
 				if (!bResults)
 				{
-					printf("Error %u in WinHttpReadData.\n", GetLastError());
+					_logger->fatal("Error %v in WinHttpReadData", GetLastError());
 					dwDownloaded = 0;
 				}
 
@@ -118,7 +136,7 @@ bool HttpRequest::SendRequest(const std::wstring &url, const std::wstring &metho
 
 	// Report any errors.
 	if (!bResults)
-		printf("Error %d has occurred.\n", GetLastError());
+		_logger->fatal("Error %v has occurred", GetLastError());
 
 	// Close any open handles.
 	if (hRequest) WinHttpCloseHandle(hRequest);

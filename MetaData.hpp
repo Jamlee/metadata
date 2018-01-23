@@ -22,7 +22,7 @@ bool WINAPI CheckPortTCP(short int dwPort, char *ipAddressStr)
 	WSADATA wsaData;
 	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (iResult != NO_ERROR) {
-		wprintf(L"WSAStartup function failed with error: %v\n", iResult);
+		logger->error("WSAStartup function failed with error:%v", iResult);
 		return false;
 	}
 
@@ -143,7 +143,7 @@ bool MetaData::GetServerIP(char* &validDhcpServerIp, short int port) {
 					data[i] = NULL;
 				}
 				else {
-					_logger->info(" Detect %v:%v is not open", data[i]->Ip, data[i]->Port);
+					_logger->info("Detect %v:%v is not open", data[i]->Ip, data[i]->Port);
 				}
 			}
 		}

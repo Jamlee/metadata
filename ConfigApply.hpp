@@ -13,6 +13,8 @@ public:
 	ConfigApply(const wstring& computerName, const  wstring& existUsername, const wstring& password);
 	bool ChangeComputerName();
 	bool ChangeUserPassword();
+	bool detectIsNeedReboot();
+	bool detectIsNeedChangePassword();
 
 private:
 	wstring _computerName;
@@ -25,7 +27,7 @@ ConfigApply::ConfigApply(const wstring& computerName, const  wstring& existUsern
 	_computerName(computerName),
 	_existUsername(existUsername),
 	_password(password) {
-	_logger = el::Loggers::getLogger("ConfigApply");
+	_logger = el::Loggers::getLogger("configapoly");
 }
 
 bool ConfigApply::ChangeComputerName() {
@@ -59,7 +61,20 @@ bool ConfigApply::ChangeUserPassword() {
 		return false;
 	}
 	else {
-		_logger->fatal("Change administrator password error: %d", nStatus);
+		_logger->error("Change administrator password error: %v", nStatus);
 		return false;
 	}
+}
+
+bool ConfigApply::detectIsNeedReboot() {
+	TCHAR  infoBuf[MAX_COMPUTERNAME_LENGTH + 1];
+	DWORD  bufCharCount = MAX_COMPUTERNAME_LENGTH + 1;
+	GetComputerName(infoBuf, &bufCharCount);
+	std::wstring ws = std::wstring(infoBuf);
+	return ws.compare(_computerName) != 0;
+}
+
+bool ConfigApply::detectIsNeedChangePassword() {
+	wstring ws(L"saved_password");
+	return _password.compare(ws) != 0;
 }
