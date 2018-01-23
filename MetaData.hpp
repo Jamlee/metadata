@@ -92,17 +92,24 @@ bool MetaData::GetServerIP(char* &validDhcpServerIp, short int port) {
 	pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
 	ulOutBufLen = sizeof(IP_ADAPTER_INFO);
 
-	if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) != ERROR_SUCCESS) {
-		free(pAdapterInfo);
-		pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
-	}
-
-	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) {
-		_logger->fatal("GetAdaptersInfo call failed with %v", dwRetVal);
+	while (true) {
+		// 通过overflow报错获取真正需要的存储空间
+		if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW) {
+			free(pAdapterInfo); // 重新分配足够的空间
+			pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
+		}
+		if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) {
+			_logger->error("GetAdaptersInfo call failed with %v", dwRetVal);
+			_logger->info("Wait %v second and retry", dwRetVal);
+			Sleep(500);
+		}
+		else {
+			break;
+		}
 	}
 
 	PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
-	int ret = 1;
+	int ret = false;
 	int threadIndex = -1;
 	while (pAdapter) {
 		if (pAdapter->DhcpEnabled) {
@@ -134,7 +141,7 @@ bool MetaData::GetServerIP(char* &validDhcpServerIp, short int port) {
 			CloseHandle(handleArr[i]);
 			if (data[i] != NULL) {
 				if (data[i]->IsMetadataServer) {
-					ret = 0; // 成功找到 Server
+					ret = true; // 成功找到 Server
 					_logger->info("Detect %v:%v is open", data[i]->Ip, data[i]->Port);
 					_logger->info("Ensure Metadata server ip: %v", data[i]->Ip);
 					validDhcpServerIp = (char*)LocalAlloc(LPTR, strlen(data[i]->Ip));
