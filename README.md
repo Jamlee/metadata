@@ -1,13 +1,14 @@
 
-### ÊµÏÖÔ­Àí
+### å®ç°åŸç†
 
-»ñÈ¡ hostname
+ä»Cloudstack MetaDataä¸­è·å– hostname
 
 ````
 curl http://localhost:8000/latest/local-hostname
 ````
 
-»ñÈ¡ÃÜÂë
+
+ä»Cloudstack MetaDataä¸­è·å–å¯†ç 
 
 ````
 wget -q -O - --header "DomU_Request: send_my_password" "192.168.4.151:8080"
