@@ -1,17 +1,17 @@
-
+﻿
 ### metadata client
 
 [![Build status](https://ci.appveyor.com/api/projects/status/60mrqfrsuepwmmf3?svg=true)](https://ci.appveyor.com/project/Jamlee/metadata)
 
 
-从Cloudstack MetaData中获取 hostname
+获取 hostname
 
 ````
 curl http://localhost:8000/latest/local-hostname
 ````
 
 
-从Cloudstack MetaData中获取密码
+获取 administrator 密码
 
 ````
 wget -q -O - --header "DomU_Request: send_my_password" "192.168.4.151:8080"
