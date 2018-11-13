@@ -1,5 +1,8 @@
 
-### 实现原理
+### metadata client
+
+[![Build status](https://ci.appveyor.com/api/projects/status/60mrqfrsuepwmmf3?svg=true)](https://ci.appveyor.com/project/Jamlee/metadata)
+
 
 从Cloudstack MetaData中获取 hostname
 
