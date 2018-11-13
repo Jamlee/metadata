@@ -4,10 +4,18 @@
 #include <winsock2.h>
 #include <iphlpapi.h>
 #include <windows.h>
-
 #include "Easylogging.h"
 
 using namespace std;
+
+const wchar_t *GetWC(const char *c)
+{
+	const size_t cSize = strlen(c) + 1;
+	wchar_t* wc = new wchar_t[cSize];
+	size_t converted = 0;
+	mbstowcs_s(&converted, wc, cSize, c, _TRUNCATE);
+	return wc;
+}
 
 typedef struct {
 	char* Ip;
@@ -15,7 +23,7 @@ typedef struct {
 	bool IsMetadataServer;
 } MetaDataServer, *PMetaDataServer;
 
-// ¼ì²é TCP ¶Ë¿ÚÁ¬Í¨ÐÔ
+// æ£€æŸ¥ TCP ç«¯å£è¿žé€šæ€§
 bool WINAPI CheckPortTCP(short int dwPort, char *ipAddressStr)
 {
 	el::Logger* logger = el::Loggers::getLogger("function");
@@ -30,7 +38,7 @@ bool WINAPI CheckPortTCP(short int dwPort, char *ipAddressStr)
 	int sock;
 	client.sin_family = AF_INET;
 	client.sin_port = htons(dwPort);
-	client.sin_addr.s_addr = inet_addr(ipAddressStr);
+	InetPton(AF_INET, GetWC(ipAddressStr), &client.sin_addr.s_addr);
 
 	sock = (int)socket(AF_INET, SOCK_STREAM, 0);
 	if (sock == INVALID_SOCKET) {
@@ -54,7 +62,7 @@ bool WINAPI CheckPortTCP(short int dwPort, char *ipAddressStr)
 	}
 }
 
-// ¼ì²éIPÊÇ·ñÎªÓÐÐ§MetaServer
+// æ£€æŸ¥IPæ˜¯å¦ä¸ºæœ‰æ•ˆMetaServer
 DWORD WINAPI CheckMds(LPVOID lpParam) {
 	PMetaDataServer mds = (PMetaDataServer)lpParam;
 	if (CheckPortTCP(mds->Port, mds->Ip)) {
@@ -78,7 +86,7 @@ MetaData::MetaData() {
 	_logger = el::Loggers::getLogger("metadata");
 }
 
-// ´ÓÊÊÅäÆ÷ÖÐ¶ÁÈ¡ÓÐÐ§µÄ DHCP ·þÎñ½øÐÐÅÐ¶Ï
+// ä»Žé€‚é…å™¨ä¸­è¯»å–æœ‰æ•ˆçš„ DHCP æœåŠ¡è¿›è¡Œåˆ¤æ–­
 bool MetaData::GetServerIP(char* &validDhcpServerIp, short int port) {
 
 	IP_ADAPTER_INFO  *pAdapterInfo;
@@ -93,9 +101,9 @@ bool MetaData::GetServerIP(char* &validDhcpServerIp, short int port) {
 	ulOutBufLen = sizeof(IP_ADAPTER_INFO);
 
 	while (true) {
-		// Í¨¹ýoverflow±¨´í»ñÈ¡ÕæÕýÐèÒªµÄ´æ´¢¿Õ¼ä
+		// é€šè¿‡overflowæŠ¥é”™èŽ·å–çœŸæ­£éœ€è¦çš„å­˜å‚¨ç©ºé—´
 		if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW) {
-			free(pAdapterInfo); // ÖØÐÂ·ÖÅä×ã¹»µÄ¿Õ¼ä
+			free(pAdapterInfo); // é‡æ–°åˆ†é…è¶³å¤Ÿçš„ç©ºé—´
 			pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
 		}
 		if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) {
@@ -116,7 +124,7 @@ bool MetaData::GetServerIP(char* &validDhcpServerIp, short int port) {
 			std::string addrStr(pAdapter->DhcpServer.IpAddress.String);
 			if (!addrStr.empty()) {
 				++threadIndex;
-				// ²ÉÓÃ thread µÄ·½Ê½½øÐÐ¶à¸ö DHCP ·þÎñÆ÷µÄÑ¡Ôñ
+				// é‡‡ç”¨ thread çš„æ–¹å¼è¿›è¡Œå¤šä¸ª DHCP æœåŠ¡å™¨çš„é€‰æ‹©
 				_logger->info("Find DHCP Server: %v", pAdapter->DhcpServer.IpAddress.String);
 				data[threadIndex] = (MetaDataServer*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(MetaDataServer));
 				data[threadIndex]->Ip = pAdapter->DhcpServer.IpAddress.String;
@@ -141,7 +149,7 @@ bool MetaData::GetServerIP(char* &validDhcpServerIp, short int port) {
 			CloseHandle(handleArr[i]);
 			if (data[i] != NULL) {
 				if (data[i]->IsMetadataServer) {
-					ret = true; // ³É¹¦ÕÒµ½ Server
+					ret = true; // æˆåŠŸæ‰¾åˆ° Server
 					_logger->info("Detect %v:%v is open", data[i]->Ip, data[i]->Port);
 					_logger->info("Ensure Metadata server ip: %v", data[i]->Ip);
 					validDhcpServerIp = (char*)LocalAlloc(LPTR, strlen(data[i]->Ip));

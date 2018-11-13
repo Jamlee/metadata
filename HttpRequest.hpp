@@ -41,9 +41,9 @@ bool HttpRequest::SendRequest(const std::wstring &host, short int port, const st
 	DWORD dwDownloaded;
 	DWORD headerSize = 0;
 	BOOL  bResults = FALSE;
-	HINTERNET hSession;
-	HINTERNET hConnect;
-	HINTERNET hRequest;
+	HINTERNET hSession = NULL;
+	HINTERNET hConnect = NULL;
+	HINTERNET hRequest = NULL;
 
 	resHeader.resize(0);
 	resBody.resize(0);
