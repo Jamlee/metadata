@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <iostream>
 #include <winsock2.h>
@@ -23,7 +23,7 @@ typedef struct {
 	bool IsMetadataServer;
 } MetaDataServer, *PMetaDataServer;
 
-// 检查 TCP 端口连通性
+// 妫€鏌?TCP 绔彛杩為€氭€?
 bool WINAPI CheckPortTCP(short int dwPort, char *ipAddressStr)
 {
 	el::Logger* logger = el::Loggers::getLogger("function");
@@ -62,7 +62,7 @@ bool WINAPI CheckPortTCP(short int dwPort, char *ipAddressStr)
 	}
 }
 
-// 检查IP是否为有效MetaServer
+// 妫€鏌P鏄惁涓烘湁鏁圡etaServer
 DWORD WINAPI CheckMds(LPVOID lpParam) {
 	PMetaDataServer mds = (PMetaDataServer)lpParam;
 	if (CheckPortTCP(mds->Port, mds->Ip)) {
@@ -86,7 +86,7 @@ MetaData::MetaData() {
 	_logger = el::Loggers::getLogger("metadata");
 }
 
-// 从适配器中读取有效的 DHCP 服务进行判断
+// 浠庨€傞厤鍣ㄤ腑璇诲彇鏈夋晥鐨?DHCP 鏈嶅姟杩涜鍒ゆ柇
 bool MetaData::GetServerIP(char* &validDhcpServerIp, short int port) {
 
 	IP_ADAPTER_INFO  *pAdapterInfo;
@@ -101,9 +101,9 @@ bool MetaData::GetServerIP(char* &validDhcpServerIp, short int port) {
 	ulOutBufLen = sizeof(IP_ADAPTER_INFO);
 
 	while (true) {
-		// 通过overflow报错获取真正需要的存储空间
+		// 閫氳繃overflow鎶ラ敊鑾峰彇鐪熸闇€瑕佺殑瀛樺偍绌洪棿
 		if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW) {
-			free(pAdapterInfo); // 重新分配足够的空间
+			free(pAdapterInfo); // 閲嶆柊鍒嗛厤瓒冲鐨勭┖闂?
 			pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
 		}
 		if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) {
@@ -124,7 +124,7 @@ bool MetaData::GetServerIP(char* &validDhcpServerIp, short int port) {
 			std::string addrStr(pAdapter->DhcpServer.IpAddress.String);
 			if (!addrStr.empty()) {
 				++threadIndex;
-				// 采用 thread 的方式进行多个 DHCP 服务器的选择
+				// 閲囩敤 thread 鐨勬柟寮忚繘琛屽涓?DHCP 鏈嶅姟鍣ㄧ殑閫夋嫨
 				_logger->info("Find DHCP Server: %v", pAdapter->DhcpServer.IpAddress.String);
 				data[threadIndex] = (MetaDataServer*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(MetaDataServer));
 				data[threadIndex]->Ip = pAdapter->DhcpServer.IpAddress.String;
@@ -149,7 +149,7 @@ bool MetaData::GetServerIP(char* &validDhcpServerIp, short int port) {
 			CloseHandle(handleArr[i]);
 			if (data[i] != NULL) {
 				if (data[i]->IsMetadataServer) {
-					ret = true; // 成功找到 Server
+					ret = true; // 鎴愬姛鎵惧埌 Server
 					_logger->info("Detect %v:%v is open", data[i]->Ip, data[i]->Port);
 					_logger->info("Ensure Metadata server ip: %v", data[i]->Ip);
 					validDhcpServerIp = (char*)LocalAlloc(LPTR, strlen(data[i]->Ip));
